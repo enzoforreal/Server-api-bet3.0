@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/enzof/server-app-bet3.0/internal/auth"
 	"github.com/enzof/server-app-bet3.0/internal/auth/predictions"
+	"github.com/enzof/server-app-bet3.0/internal/middleware"
 	"github.com/enzof/server-app-bet3.0/pkg/config"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -37,9 +38,10 @@ func main() {
 		authRoutes.POST("/login", auth.LoginUser)
 	}
 
-	predictionsRoutes := router.Group("/predictions")
+	protectedRoutes := router.Group("/").Use(middleware.JWTAuthMiddleware())
 	{
-		predictionsRoutes.GET("/", predictions.FetchPredictions)
+		protectedRoutes.GET("/predictions", predictions.FetchPredictions)
+
 	}
 
 	router.Run(":8080")
