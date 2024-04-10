@@ -1,19 +1,20 @@
 package auth
 
 import (
-	"github.com/enzof/server-app-bet3.0/pkg/config"
 	"github.com/enzof/server-app-bet3.0/pkg/util"
 	"github.com/gin-gonic/gin"
 	"golang.org/x/crypto/bcrypt"
 )
 
-func RegisterUser(c *gin.Context) {
-
-	db := config.GetDB()
-
+func RegisterUser(c *gin.Context, db UserDB) {
 	var newUser User
 
 	if err := c.ShouldBindJSON(&newUser); err != nil {
+		c.JSON(400, gin.H{"error": err.Error()})
+		return
+	}
+
+	if err := util.ValidateStruct(&newUser); err != nil {
 		c.JSON(400, gin.H{"error": err.Error()})
 		return
 	}
@@ -25,35 +26,30 @@ func RegisterUser(c *gin.Context) {
 	}
 	newUser.Password = hashedPassword
 
-	result := db.Create(&newUser)
-
-	if result.Error != nil {
-		c.JSON(400, gin.H{"error": result.Error.Error()})
-
+	if err := db.CreateUser(&newUser); err != nil {
+		c.JSON(400, gin.H{"error": err.Error()})
 		return
 	}
+
 	c.JSON(200, gin.H{"message": "Inscription réussie!"})
 }
 
-func LoginUser(c *gin.Context) {
-
-	db := config.GetDB()
+func LoginUser(c *gin.Context, db UserDB) {
 	var loginDetails UserLogin
-	var user User
+	var user *User // Change to pointer type
 
 	if err := c.ShouldBindJSON(&loginDetails); err != nil {
 		c.JSON(400, gin.H{"error": "Invalid login details"})
 		return
 	}
 
-	result := db.Where("email = ?", loginDetails.Email).First(&user)
-	if result.Error != nil {
+	user, err := db.GetUserByEmail(loginDetails.Email) // This now correctly matches the expected type
+	if err != nil {
 		c.JSON(404, gin.H{"error": "User not found"})
 		return
 	}
 
-	err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(loginDetails.Password))
-	if err != nil {
+	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(loginDetails.Password)); err != nil {
 		c.JSON(401, gin.H{"error": "Invalid login credentials"})
 		return
 	}
