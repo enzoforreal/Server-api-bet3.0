@@ -27,6 +27,11 @@ func main() {
 	realUserDB := &auth.RealUserDB{DB: db}
 	router := gin.Default()
 
+	httpRouter := gin.New()
+	httpRouter.GET("/*any", func(c *gin.Context) {
+		c.Redirect(301, "https://"+c.Request.Host+c.Request.RequestURI)
+	})
+
 	router.GET("/", func(c *gin.Context) {
 		c.JSON(200, gin.H{"message": "Bienvenue sur l'Application de Conseils de Paris Sportifs!"})
 	})
@@ -42,5 +47,9 @@ func main() {
 		protectedRoutes.GET("/predictions", predictions.FetchPredictions)
 	}
 
-	router.Run(":8080")
+	go func() {
+		router.RunTLS(":443", "/mnt/c/Users/enzof/Project/Server-app-bet3.0/cert.pem", "/mnt/c/Users/enzof/Project/Server-app-bet3.0/decrypted_key.pem")
+	}()
+
+	httpRouter.Run(":8080")
 }
